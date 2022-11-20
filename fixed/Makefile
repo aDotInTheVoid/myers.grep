@@ -28,20 +28,20 @@ gen4 : gen4.c
 	$(CC) $(CFLAGS) -o gen4 gen4.c
 
 wmm4 : wmm.c gen4
-	gen4 4 -y >xxx.c
+	./gen4 4 -y >xxx.c
 	$(CC) $(CFLAGS) -o wmm4 wmm.c xxx.c
 	rm xxx.c
 wmm4S : wmm.c gen4
-	gen4 4 -y >xxx.c
+	./gen4 4 -y >xxx.c
 	$(CC) $(CFLAGS) -DSTATS -o wmm4S wmm.c xxx.c
 	rm xxx.c
 
 wmm5 : wmm.c gen4
-	gen4 5 -y >xxx.c
+	./gen4 5 -y >xxx.c
 	$(CC) $(CFLAGS) -o wmm5 wmm.c xxx.c
 	rm xxx.c
 wmm5S : wmm.c gen4
-	gen4 5 -y >xxx.c
+	./gen4 5 -y >xxx.c
 	$(CC) $(CFLAGS) -DSTATS -o wmm5S wmm.c xxx.c
 	rm xxx.c
 
