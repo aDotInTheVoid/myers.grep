@@ -1,0 +1,2260 @@
+#! /bin/sh
+# This is a shell archive.  Remove anything before this line, then unpack
+# it by saving it into a file and typing "sh file".  To overwrite existing
+# files, type "sh file -c".  You can also feed this as standard input via
+# unshar, or by typing "sh <file", e.g..  If this archive is complete, you
+# will see the following message at the end:
+#		"End of shell archive."
+# Contents:  Makefile agrep.c banav.c bngrep.c chang.c gen4.c genseq.c
+#   main.i myers.c mygrep.c parse.i ukk.c wmm.c
+# Wrapped by gene@bobcat.CS.Arizona.EDU on Mon Jul 13 17:01:36 1998
+PATH=/bin:/usr/bin:/usr/ucb ; export PATH
+if test -f 'Makefile' -a "${1}" != "-c" ; then 
+  echo shar: Will not clobber existing file \"'Makefile'\"
+else
+echo shar: Extracting \"'Makefile'\" \(1713 characters\)
+sed "s/^X//" >'Makefile' <<'END_OF_FILE'
+XCC = gcc
+XCFLAGS = -O
+X
+Xall : ukk chang wmm4 wmm5 myers banav mygrep agrep bngrep \
+X      ukkS changS wmm4S wmm5S myersS banavS mygrepS agrepS bngrepS
+X
+Xdata :
+X	gcc -O genseq.c
+X	a.out "1000000,2" >DATA.2
+X	a.out "1000000,4" >DATA.4
+X	a.out "1000000,8" >DATA.8
+X	a.out "1000000,16" >DATA.16
+X	a.out "1000000,32" >DATA.32
+X	a.out "1000000,64" >DATA.64
+X	rm a.out
+X
+Xukk : ukk.c
+X	$(CC) $(CFLAGS) -o ukk ukk.c
+XukkS : ukk.c
+X	$(CC) $(CFLAGS) -DSTATS -o ukkS ukk.c
+X
+Xchang : chang.c
+X	$(CC) $(CFLAGS) -o chang chang.c
+XchangS : chang.c
+X	$(CC) $(CFLAGS) -DSTATS -o changS chang.c
+X
+Xgen4 : gen4.c
+X	$(CC) $(CFLAGS) -o gen4 gen4.c
+X
+Xwmm4 : wmm.c gen4
+X	gen4 4 -y >xxx.c
+X	$(CC) $(CFLAGS) -o wmm4 wmm.c xxx.c
+X	rm xxx.c
+Xwmm4S : wmm.c gen4
+X	gen4 4 -y >xxx.c
+X	$(CC) $(CFLAGS) -DSTATS -o wmm4S wmm.c xxx.c
+X	rm xxx.c
+X
+Xwmm5 : wmm.c gen4
+X	gen4 5 -y >xxx.c
+X	$(CC) $(CFLAGS) -o wmm5 wmm.c xxx.c
+X	rm xxx.c
+Xwmm5S : wmm.c gen4
+X	gen4 5 -y >xxx.c
+X	$(CC) $(CFLAGS) -DSTATS -o wmm5S wmm.c xxx.c
+X	rm xxx.c
+X
+Xmyers : myers.c
+X	$(CC) $(CFLAGS) -o myers myers.c
+XmyersS : myers.c
+X	$(CC) $(CFLAGS) -DSTATS -o myersS myers.c
+X
+Xbanav : banav.c
+X	$(CC) $(CFLAGS) -o banav banav.c
+XbanavS : banav.c
+X	$(CC) $(CFLAGS) -DSTATS -o banavS banav.c
+X
+Xmygrep : mygrep.c
+X	$(CC) $(CFLAGS) -o mygrep mygrep.c
+XmygrepS : mygrep.c
+X	$(CC) $(CFLAGS) -DSTATS -o mygrepS mygrep.c
+X
+Xagrep : agrep.c
+X	$(CC) $(CFLAGS) -o agrep agrep.c
+XagrepS : agrep.c
+X	$(CC) $(CFLAGS) -DSTATS -o agrepS agrep.c
+X
+Xbngrep : bngrep.c
+X	$(CC) $(CFLAGS) -o bngrep bngrep.c
+XbngrepS : bngrep.c
+X	$(CC) $(CFLAGS) -DSTATS -o bngrepS bngrep.c
+X
+Xclear:
+X	rm ukk chang wmm4 wmm5 gen4 myers banav mygrep agrep bngrep
+X	rm ukkS changS wmm4S wmm5S myersS banavS mygrepS agrepS bngrepS
+X	rm DATA.2 DATA.4 DATA.8 DATA.16 DATA.32 DATA.64
+END_OF_FILE
+if test 1713 -ne `wc -c <'Makefile'`; then
+    echo shar: \"'Makefile'\" unpacked with wrong size!
+fi
+# end of 'Makefile'
+fi
+if test -f 'agrep.c' -a "${1}" != "-c" ; then 
+  echo shar: Will not clobber existing file \"'agrep.c'\"
+else
+echo shar: Extracting \"'agrep.c'\" \(2546 characters\)
+sed "s/^X//" >'agrep.c' <<'END_OF_FILE'
+X#include <stdio.h>
+X#include <sys/file.h>
+X#include <string.h>
+X#include <ctype.h>
+X#include <math.h>
+X
+X#define WORD long
+X
+X#define SIGMA    128
+X#define BUF_MAX 2048
+X
+X#include "parse.i"
+X
+Xunsigned WORD Pc[SIGMA];
+X
+Xvoid setup_search()
+X{ unsigned WORD One;
+X  register int a, p;
+X  void error();
+X
+X  if (patlen > 8*sizeof(unsigned WORD))
+X    error("Pattern is longer than %d\n elements",8*sizeof(unsigned WORD));
+X  for (a = 0; a < SIGMA; a++)
+X    Pc[a] = 0;
+X  One = 1;
+X  for (p = 0; p < patlen; p++)
+X    { if (patvec[p].type == CHAR)
+X        Pc[*(patvec[p].value)] |= One;
+X      else
+X        for (a = 0; a < SIGMA; a++)
+X          if (patvec[p].value[a>>3] & 1<<a%8)
+X            Pc[a] |= One;
+X      One <<= 1;
+X    }
+X
+X#ifdef SHOW
+X  One = 1;
+X  for (a = 0; a < SIGMA; a++)
+X    { if (isprint(a))
+X        printf("  %c: ",a);
+X      else
+X        printf("%3d: ",a);
+X      for (p = 0; p < patlen; p++)
+X        if (Pc[a] & (One<<p))
+X          printf("1");
+X        else
+X          printf("0");
+X      printf("\n");
+X    }
+X#endif
+X}
+X
+Xstatic int cnt = 0;
+X
+Xvoid report(int pos)
+X{ cnt += 1; }
+X
+Xvoid search(ifile,dif) int ifile, dif;
+X{ register int d;
+X  register unsigned WORD W, X, Y, P, Q, A;
+X  register unsigned WORD *V;
+X  unsigned WORD *VA, Ebit, One;
+X  int i, p, num, base; 
+X  static char buf[BUF_MAX];
+X
+X  VA = (unsigned WORD *) malloc((dif+1)*sizeof(unsigned WORD));
+X
+X  One = 1;
+X
+X  for (d = 0; d <= dif; d++)
+X    VA[d] = 0;
+X  Ebit = (One << (patlen-1));
+X
+X  for (base = 1; (num = read(ifile,buf,BUF_MAX)) > 0; base += num)
+X    { for (i = 0; i < num; i++)
+X        { A  = Pc[buf[i]];
+X          P  = *(V = VA);
+X          X  = (P << 1 | One);
+X          *V = W = X & A;
+X          for (d = 1; d <= dif; d++)
+X            { Q = *++V;
+X              Y = (Q << 1 | One);
+X              *V = W = P | (W<<1) | X | (Y & A); 
+X              P = Q;
+X              X = Y;
+X            }
+X
+X          if (W & Ebit)
+X            report(base+i);
+X
+X#ifdef SHOW
+X          if (isprint(buf[i]))
+X            printf("  %c: ",buf[i]);
+X          else
+X            printf("%3d: ",buf[i]);
+X          printf("V[0] =");
+X          for (p = 0; p < patlen; p++)
+X            if (VA[0] & (One<<p))
+X              printf("1");
+X            else
+X              printf("0");
+X          printf("\n");
+X          for (d = 1; d <= dif; d++)
+X            { printf("     V[%d] =",d);
+X              for (p = 0; p < patlen; p++)
+X                if (VA[d] & (One<<p))
+X                  printf("1");
+X                else
+X                  printf("0");
+X              printf("\n");
+X            }
+X#endif
+X        }
+X    }
+X}
+X
+X#include "main.i"
+END_OF_FILE
+if test 2546 -ne `wc -c <'agrep.c'`; then
+    echo shar: \"'agrep.c'\" unpacked with wrong size!
+fi
+# end of 'agrep.c'
+fi
+if test -f 'banav.c' -a "${1}" != "-c" ; then 
+  echo shar: Will not clobber existing file \"'banav.c'\"
+else
+echo shar: Extracting \"'banav.c'\" \(10448 characters\)
+sed "s/^X//" >'banav.c' <<'END_OF_FILE'
+X#include <stdio.h>
+X#include <sys/file.h>
+X#include <string.h>
+X#include <ctype.h>
+X#include <math.h>
+X
+X#define WORD long
+X
+X#define SIGMA    128
+X#define BUF_MAX 2048
+X
+X#include "parse.i"
+X
+Xstatic int W;
+X
+Xvoid setup_search()
+X{ W = 8*sizeof(unsigned WORD); }
+X
+Xstatic int J, lr, lc;
+X
+Xstatic unsigned WORD M1, M2, M3, Din, GL, GI;
+X
+Xstatic unsigned WORD *Tm2[SIGMA];
+X
+Xstatic unsigned WORD Tm[SIGMA];
+X
+Xvoid dynamic_setup(int dif)
+X{ register unsigned WORD t, f, *b, one, con;
+X  unsigned WORD Pc[SIGMA];
+X  register int j, i, a, p, k;
+X  int  lrp1;
+X  void error();
+X
+X  if (dif+1 >= W)
+X    error("Pattern diagonal does not fit in a word\n");
+X
+X  one = 1;
+X
+X  lr   = dif + 1;
+X  lrp1 = lr+1;
+X  lc   = W/lrp1;
+X  J    = ((patlen-dif) - 1)/lc;
+X
+X  M3 = 1;
+X  for (i = 0; i < dif; i++)
+X    M3 = (M3 << 1) | one;
+X
+X  Din = M3;
+X  for (i = 1; i < lc; i++)
+X    Din |= (Din << lrp1);
+X
+X  M1 = 1;
+X  for (i = 1; i < lc; i++)
+X    M1 |= (M1 << lrp1);
+X
+X  M2 = M1 | M3;
+X
+X  GI = (one << dif);
+X  j  = (lc - (patlen-dif) % lc) %lc;
+X  GL = (one << (lrp1*j + dif));
+X
+X  b = (unsigned WORD *) malloc(sizeof(unsigned WORD)*SIGMA*(J+1));
+X
+X  for (a = 0; a < SIGMA; a++)
+X    { Tm2[a] = b;
+X      b += (J+1);
+X    }
+X
+X  for (j = 0; j <= J; j++)
+X    { for (a = 0; a < SIGMA; a++)
+X        Pc[a] = -1;
+X
+X      k = lc*j + lr + lc - 1;
+X      if (k > patlen) k = patlen;
+X      one = 1;
+X      for (p = lc*j; p < k; p++)
+X        { con = ~one;
+X          if (patvec[p].type == CHAR)
+X            Pc[*(patvec[p].value)] &= con;
+X          else
+X            for (a = 0; a < SIGMA; a++)
+X              if (patvec[p].value[a>>3] & 1<<a%8)
+X                Pc[a] &= con;
+X          one <<= 1;
+X        }
+X
+X     for (a = 0; a < SIGMA; a++)
+X       { f = Pc[a];
+X         t = 0;
+X         for (i = 0; i < lc; i++)
+X           { t = (t << lrp1) | (f & M3);
+X             f >>= 1;
+X           }
+X         Tm2[a][j] = t;
+X       }
+X    }
+X
+X  for (a = 0; a < SIGMA; a++)
+X    Tm[a] = Tm2[a][0];
+X
+X#ifdef SHOW
+X  printf("J = %d  lc = %d  lr = %d\n",J,lc,lr);
+X  one = 1;
+X  printf(" M1: ");
+X  for (p = lc*lrp1-1; p >= 0; p--)
+X    if (M1 & (one<<p))
+X      printf("1");
+X    else
+X      printf("0");
+X  printf("\n");
+X
+X  printf(" M2: ");
+X  for (p = lc*lrp1-1; p >= 0; p--)
+X    if (M2 & (one<<p))
+X      printf("1");
+X    else
+X      printf("0");
+X  printf("\n");
+X
+X  printf(" M3: ");
+X  for (p = lc*lrp1-1; p >= 0; p--)
+X    if (M3 & (one<<p))
+X      printf("1");
+X    else
+X      printf("0");
+X  printf("\n");
+X
+X  printf("Din: ");
+X  for (p = lc*lrp1-1; p >= 0; p--)
+X    if (Din & (one<<p))
+X      printf("1");
+X    else
+X      printf("0");
+X  printf("\n");
+X
+X  printf(" GL: ");
+X  for (p = lc*lrp1-1; p >= 0; p--)
+X    if (GL & (one<<p))
+X      printf("1");
+X    else
+X      printf("0");
+X  printf("\n");
+X
+X  printf(" GI: ");
+X  for (p = lc*lrp1-1; p >= 0; p--)
+X    if (GI & (one<<p))
+X      printf("1");
+X    else
+X      printf("0");
+X  printf("\n");
+X
+X/*
+X  for (a = 0; a < SIGMA; a++)
+X    { if (isprint(a))
+X        printf("  %c: ",a);
+X      else
+X        printf("%3d: ",a);
+X      for (j = 0; j <= J; j++)
+X        { printf("[%d] = ",j);
+X          for (p = lc*lrp1-1; p >= 0; p--)
+X            if (Tm2[a][j] & (one<<p))
+X              printf("1");
+X            else
+X              printf("0");
+X          printf("\n     ");
+X        }
+X      printf("\n");
+X    }
+X*/
+X
+X  fflush(stdout);
+X#endif
+X}
+X
+X#ifdef STATS
+Xstatic long avedep, aveinc, avedec, avezero;
+X#endif
+X
+Xstatic int cnt = 0;
+X
+Xvoid report(int pos)
+X{ cnt += 1; }
+X
+Xvoid search(ifile,dif) int ifile, dif;
+X{ register unsigned WORD *D, X, C, *e;
+X  unsigned WORD one;
+X  int lrp1, lrp2, ld, ldm1;
+X  int i, j, num, base, active; 
+X  static char buf[BUF_MAX];
+X  static void search1(int,int);
+X
+X  dynamic_setup(dif);
+X
+X  if (lc == 1)
+X    { search1(ifile,dif);
+X      return;
+X    }
+X
+X  one  = 1;
+X  lrp1 = lr+1;
+X  lrp2 = lr+2;
+X  ld   = lrp1*(lc-1);
+X  ldm1 = ld - 1;
+X
+X  D  = (unsigned WORD *) malloc(sizeof(unsigned WORD)*(J+2));
+X
+X  for (j = 0; j <= J+1; j++)
+X    D[j] = Din;
+X
+X  C = D[0];
+X  active = 0;
+X
+X#ifdef STATS
+X  avedep = aveinc = avedec = avezero = 0;
+X#endif
+X  for (base = 1; (num = read(ifile,buf,BUF_MAX)) > 0; base += num)
+X    { i = 0;
+X      while (i < num)
+X        if (active == 0)
+X          { while (i < num)
+X              { X = (C >> lrp1) | Tm[buf[i++]];
+X                C = ( (C << 1) | M1) 
+X                  & ( (C << lrp2) | M2 )
+X                  & (((X + M1) ^ X) >> 1) & Din;
+X#ifdef STATS
+X                avezero += 1;
+X#endif
+X#ifdef SHOW
+X                { int p;
+X                  if (isprint(buf[i-1]))
+X                    printf("  %c: ",buf[i-1]);
+X                  else
+X                    printf("%3d: ",buf[i-1]);
+X                  printf("D[0] =");
+X                  for (p = lc*lrp1-1; p >= 0; p--)
+X                    if (C & (one << p))
+X                      printf("1");
+X                    else
+X                      printf("0");
+X                  printf("\n\n");
+X                }
+X#endif
+X                if ((C & GI) == 0)
+X                  { active = 1; D[0] = C;
+X                    break;
+X                  }
+X              }
+X          }
+X
+X        else
+X          { while (i < num)
+X              { e = Tm2[buf[i++]];
+X                C = 0;
+X                for (j = 0; j <= active; j++)
+X                  { X = (D[j] >> lrp1) | (C << ld) | *e++;
+X                    C = D[j];
+X                    D[j] = ((C<<1) & ((C<<lrp2) | (D[j+1]>>ldm1)) | M1)
+X                         & (((X + M1) ^ X) >> 1) & Din;
+X                  }
+X#ifdef STATS
+X                avedep += active;
+X#endif
+X
+X                X = (active == J) ? GL : GI;
+X                if (D[active] & X)
+X                  { while ((~ D[active] & Din) == 0)
+X                      if (D[active-1] & GI)
+X#ifdef STATS
+X                        { avedec += 1;
+X                          if (--active == 0) break;
+X                        }
+X#else
+X                        { if (--active == 0) break; }
+X#endif
+X                      else
+X                        break;
+X                  }
+X                else if (active == J)
+X                  report(base+i);
+X                else
+X#ifdef STATS
+X                  { aveinc += 1;
+X                    active += 1;
+X                  }
+X#else
+X                  active += 1;
+X#endif
+X#ifdef SHOW
+X                { int p;
+X                  if (isprint(buf[i-1]))
+X                    printf("  %c: ",buf[i-1]);
+X                  else
+X                    printf("%3d: ",buf[i-1]);
+X        
+X                  for (j = 0; j <= J; j++)
+X                    { printf("D[%d] =",j);
+X                      X = D[j];
+X                      for (p = lc*lrp1-1; p >= 0; p--)
+X                        if (X & (one << p))
+X                          printf("1");
+X                        else
+X                          printf("0");
+X                      printf("\n     ");
+X                    }
+X                  printf("  active = %d\n",active);
+X                }
+X#endif
+X                if (active == 0)
+X                  { C = D[0]; break; }
+X              }
+X          }
+X    }
+X
+X#ifdef STATS
+X{ double len;
+X  len = base - 1.;
+X  printf("Ave. Depth = %g, Ave. Inc = %g, Ave. Dec = %g Ave. Filter = %g\n",
+X         avedep/len + 1., aveinc/len, avedec/len, avezero/len);
+X}
+X#endif
+X}
+X
+Xstatic void search1(ifile,dif) int ifile, dif;
+X{ register unsigned WORD *D, X, C, *e;
+X  unsigned WORD one;
+X  int i, j, num, base, active; 
+X  static char buf[BUF_MAX];
+X
+X  one  = 1;
+X
+X  D  = (unsigned WORD *) malloc(sizeof(unsigned WORD)*(J+2));
+X
+X  for (j = 0; j <= J+1; j++)
+X    D[j] = Din;
+X
+X  C = D[0];
+X  active = 0;
+X
+X#ifdef STATS
+X  avedep = aveinc = avedec = avezero = 0;
+X#endif
+X  for (base = 1; (num = read(ifile,buf,BUF_MAX)) > 0; base += num)
+X    { i = 0;
+X      while (i < num)
+X        if (active == 0)
+X          { while (i < num)
+X              { X = Tm[buf[i++]];
+X                C = ((C << 1) | 1) 
+X                  & (((X + 1) ^ X) >> 1) & Din;
+X#ifdef STATS
+X                avezero += 1;
+X#endif
+X#ifdef SHOW
+X                { int p;
+X                  if (isprint(buf[i-1]))
+X                    printf("  %c: ",buf[i-1]);
+X                  else
+X                    printf("%3d: ",buf[i-1]);
+X                  printf("D[0] =");
+X                  for (p = lr; p >= 0; p--)
+X                    if (C & (one << p))
+X                      printf("1");
+X                    else
+X                      printf("0");
+X                  printf("\n\n");
+X                }
+X#endif
+X                if ((C & GI) == 0)
+X                  { active = 1; D[0] = C;
+X                    break;
+X                  }
+X              }
+X          }
+X
+X        else
+X          { while (i < num)
+X              { e = Tm2[buf[i++]];
+X                C = 0;
+X                for (j = 0; j <= active; j++)
+X                  { X = C | *e++;
+X                    C = D[j];
+X                    D[j] = (((C & D[j+1]) <<1) | 1)
+X                         & (((X + 1) ^ X) >> 1) & Din;
+X                  }
+X#ifdef STATS
+X                avedep += active;
+X#endif
+X
+X                X = (active == J) ? GL : GI;
+X                if (D[active] & X)
+X                  { while ((~ D[active] & Din) == 0)
+X                      if (D[active-1] & GI)
+X#ifdef STATS
+X                        { avedec += 1;
+X                          if (--active == 0) break;
+X                        }
+X#else
+X                        { if (--active == 0) break; }
+X#endif
+X                      else
+X                        break;
+X                  }
+X                else if (active == J)
+X                  report(base+i);
+X                else
+X#ifdef STATS
+X                  { aveinc += 1;
+X                    active += 1;
+X                  }
+X#else
+X                  active += 1;
+X#endif
+X#ifdef SHOW
+X                { int p;
+X                  if (isprint(buf[i-1]))
+X                    printf("  %c: ",buf[i-1]);
+X                  else
+X                    printf("%3d: ",buf[i-1]);
+X        
+X                  for (j = 0; j <= J; j++)
+X                    { printf("D[%d] =",j);
+X                      X = D[j];
+X                      for (p = lr; p >= 0; p--)
+X                        if (X & (one << p))
+X                          printf("1");
+X                        else
+X                          printf("0");
+X                      printf("\n     ");
+X                    }
+X                  printf("  active = %d\n",active);
+X                }
+X#endif
+X                if (active == 0)
+X                  { C = D[0]; break; }
+X              }
+X          }
+X    }
+X
+X#ifdef STATS
+X{ double len;
+X  len = base - 1.;
+X  printf("Ave. Depth = %g, Ave. Inc = %g, Ave. Dec = %g Ave. Filter = %g\n",
+X         avedep/len + 1., aveinc/len, avedec/len, avezero/len);
+X}
+X#endif
+X}
+X
+X#include "main.i"
+END_OF_FILE
+if test 10448 -ne `wc -c <'banav.c'`; then
+    echo shar: \"'banav.c'\" unpacked with wrong size!
+fi
+# end of 'banav.c'
+fi
+if test -f 'bngrep.c' -a "${1}" != "-c" ; then 
+  echo shar: Will not clobber existing file \"'bngrep.c'\"
+else
+echo shar: Extracting \"'bngrep.c'\" \(3437 characters\)
+sed "s/^X//" >'bngrep.c' <<'END_OF_FILE'
+X#include <stdio.h>
+X#include <sys/file.h>
+X#include <string.h>
+X#include <ctype.h>
+X#include <math.h>
+X
+X#define WORD long
+X
+X#define SIGMA    128
+X#define BUF_MAX 2048
+X
+X#include "parse.i"
+X
+Xvoid setup_search()
+X{ return; }
+X
+Xstatic unsigned WORD M1, M2, M3, Din, G;
+X
+Xstatic unsigned WORD Tm[SIGMA];
+X
+Xstatic void dynamic_setup(int dif)
+X{ register unsigned WORD t, f, one, con;
+X  unsigned WORD Pc[SIGMA];
+X  register int i, a, p, k2;
+X  void error();
+X
+X  k2 = dif+2;
+X
+X  if ((patlen-dif)*k2 > 8*sizeof(unsigned WORD))
+X    error("Pattern does not fit in a word\n");
+X
+X  one = 1;
+X
+X  M3 = 1;
+X  for (i = 0; i < dif; i++)
+X    M3 = (M3 << 1) | one;
+X
+X  Din = M3;
+X  for (i = 1; i < patlen-dif; i++)
+X    Din |= (Din << k2);
+X
+X  M1 = 1;
+X  for (i = 1; i < patlen-dif; i++)
+X    M1 |= (M1 << k2);
+X
+X  M2 = M1 | M3;
+X
+X  G = (one << dif);
+X
+X  for (a = 0; a < SIGMA; a++)
+X    Pc[a] = -1;
+X
+X  one = 1;
+X  for (p = 0; p < patlen; p++)
+X    { con = ~one;
+X      if (patvec[p].type == CHAR)
+X        Pc[*(patvec[p].value)] &= con;
+X      else
+X        for (a = 0; a < SIGMA; a++)
+X          if (patvec[p].value[a>>3] & 1<<a%8)
+X            Pc[a] &= con;
+X      one <<= 1;
+X    }
+X
+X  for (a = 0; a < SIGMA; a++)
+X    { f = Pc[a];
+X      t = 0;
+X      for (i = 0; i < patlen-dif; i++)
+X        { t = (t << k2) | (f & M3);
+X          f >>= 1;
+X        }
+X      Tm[a] = t;
+X    }
+X
+X#ifdef SHOW
+X  one = 1;
+X  printf(" M1: ");
+X  for (p = (patlen-dif)*k2-1; p >= 0; p--)
+X    if (M1 & (one<<p))
+X      printf("1");
+X    else
+X      printf("0");
+X  printf("\n");
+X
+X  printf(" M2: ");
+X  for (p = (patlen-dif)*k2-1; p >= 0; p--)
+X    if (M2 & (one<<p))
+X      printf("1");
+X    else
+X      printf("0");
+X  printf("\n");
+X
+X  printf(" M3: ");
+X  for (p = (patlen-dif)*k2-1; p >= 0; p--)
+X    if (M3 & (one<<p))
+X      printf("1");
+X    else
+X      printf("0");
+X  printf("\n");
+X
+X  printf("Din: ");
+X  for (p = (patlen-dif)*k2-1; p >= 0; p--)
+X    if (Din & (one<<p))
+X      printf("1");
+X    else
+X      printf("0");
+X  printf("\n");
+X
+X  printf("  G: ");
+X  for (p = (patlen-dif)*k2-1; p >= 0; p--)
+X    if (G & (one<<p))
+X      printf("1");
+X    else
+X      printf("0");
+X  printf("\n");
+X
+X  for (a = 0; a < SIGMA; a++)
+X    { if (isprint(a))
+X        printf("  %c: ",a);
+X      else
+X        printf("%3d: ",a);
+X      for (p = (patlen-dif)*k2-1; p >= 0; p--)
+X        if (Tm[a] & (one<<p))
+X          printf("1");
+X        else
+X          printf("0");
+X      printf("\n");
+X    }
+X#endif
+X}
+X
+Xstatic cnt = 0;
+X
+Xvoid report(int pos)
+X{ cnt += 1; }
+X
+Xvoid search(ifile,dif) int ifile, dif;
+X{ register unsigned WORD D, X;
+X  register unsigned WORD m1, m2, g, din;
+X  unsigned WORD one;
+X  int k2, k3;
+X  int a, i, num, base; 
+X  static char buf[BUF_MAX];
+X
+X  one = 1;
+X  k2 = dif+2;
+X  k3 = dif+3;
+X
+X  dynamic_setup(dif);
+X
+X  m1 = M1;
+X  m2 = M2;
+X  g  = G;
+X  D  = din = Din;
+X  for (base = 1; (num = read(ifile,buf,BUF_MAX)) > 0; base += num)
+X    { for (i = 0; i < num; i++)
+X        { a  = buf[i];
+X
+X          X = (D >> k2) | Tm[a];
+X          D = ((D << 1) | m1) & ((D << k3) | m2) &
+X              (((X + m1) ^ X) >> 1) & din;
+X
+X          if ((D & g) == 0)
+X            report(base+i);
+X#ifdef SHOW
+X        { int p;
+X          if (isprint(a))
+X            printf("  %c: ",a);
+X          else
+X            printf("%3d: ",a);
+X
+X          printf("D  =");
+X          for (p = (patlen-dif)*k2-1; p >= 0; p--)
+X            if (D & (one << p))
+X              printf("1");
+X            else
+X              printf("0");
+X          printf("\n");
+X        }
+X#endif
+X        }
+X    }
+X}
+X
+X#include "main.i"
+END_OF_FILE
+if test 3437 -ne `wc -c <'bngrep.c'`; then
+    echo shar: \"'bngrep.c'\" unpacked with wrong size!
+fi
+# end of 'bngrep.c'
+fi
+if test -f 'chang.c' -a "${1}" != "-c" ; then 
+  echo shar: Will not clobber existing file \"'chang.c'\"
+else
+echo shar: Extracting \"'chang.c'\" \(2760 characters\)
+sed "s/^X//" >'chang.c' <<'END_OF_FILE'
+X#include <stdio.h>
+X#include <sys/file.h>
+X#include <string.h>
+X#include <ctype.h>
+X#include <math.h>
+X
+X#define SIGMA    128
+X#define BUF_MAX 2048
+X
+X#include "parse.i"
+X
+Xstatic int *TRAN[128];
+X
+Xvoid setup_search()
+X{ register int a, p, *b;
+X
+X  b = (int *) malloc(sizeof(int)*SIGMA*(patlen+2));
+X  for (a = 0; a < SIGMA; a++)
+X    { TRAN[a] = b;
+X      b[patlen] = b[patlen+1] = patlen;
+X      for (p = patlen-1; p >= 0; p -= 1)
+X        if (patvec[p].type == CHAR)
+X          if (a == *(patvec[p].value))
+X            b[p] = p;
+X          else
+X            b[p] = b[p+1];
+X        else if (patvec[p].value[a>>3] & 1<<a%8)
+X          b[p] = p;
+X        else
+X          b[p] = b[p+1];
+X      b += patlen+2;
+X    }
+X#ifdef SHOW
+X  for (a = 0; a < SIGMA; a++)
+X    if (TRAN[a][0] < patlen)
+X      { printf("%c: ",a);
+X        for (p = TRAN[a][0]; p < patlen; p = TRAN[a][p+1])
+X          printf(" %2d",p);
+X        printf("\n");
+X      }
+X#endif
+X}
+X
+X#ifdef STATS
+Xstatic int avedep;
+X#endif
+X
+Xvoid search(ifile,dif) int ifile, dif;
+X{ register int next_match;
+X  register int next_dr;
+X  register int *dr_ptr;
+X  register int kmax;
+X  register int e;
+X  register int *l, cd;
+X  int i, num, base, *del;
+X  static char buf[BUF_MAX];
+X
+X  kmax = dif+1;
+X  del = (int *) malloc(sizeof(int)*patlen);
+X  del[0] = 0;
+X  del[1] = patlen+1;
+X#ifdef STATS
+X  avedep = 1;
+X#endif
+X
+X  for (base = 1; (num = read(ifile,buf,BUF_MAX)) > 0; base += num)
+X    { for (i = 0; i < num; i++)
+X        { l = TRAN[buf[i]];
+X
+X	  next_match = l[0];
+X	  next_dr = *(dr_ptr = del+1);
+X  
+X          while (1)
+X           { if (next_match >= next_dr)
+X                { if (next_dr == dr_ptr[1])
+X		    *dr_ptr++ = next_dr;
+X		  *dr_ptr++ = next_dr+1;
+X                }
+X	      else
+X                { *dr_ptr++ = next_match+1;
+X	          if ((next_match=l[next_dr]) >= kmax)
+X                    { if (next_dr >= kmax)
+X                        break;
+X		      next_dr = *dr_ptr;
+X		      while (next_dr < kmax)
+X                        { if (next_dr == dr_ptr[1])
+X			    *dr_ptr++ = next_dr;
+X			  *dr_ptr++ = next_dr+1;
+X		          next_dr = *dr_ptr;
+X		        }
+X		      break;
+X		    }
+X	        }
+X	      next_dr = *dr_ptr;
+X	    }
+X  
+X          while (dr_ptr[-1] > patlen)
+X            dr_ptr -= 1;
+X	  *dr_ptr = patlen+1;
+X
+X	  e = patlen - (cd = (dr_ptr-del)-1);
+X          if (e <= dif) printf("  Match at %d\n",base+i);
+X  
+X	  while (*--dr_ptr - cd > dif)
+X	    cd--;
+X	  if ((kmax = dif+cd+1) > patlen) kmax = patlen;
+X#ifdef STATS
+X          avedep += (dr_ptr - del);
+X#endif
+X  
+X#ifdef SHOW
+X	  printf("col %2d(%c): ",base+i,buf[i]);
+X	  for (dr_ptr = del; *dr_ptr <= patlen; dr_ptr++)
+X	    printf("%d ",*dr_ptr);
+X	  printf("\n");
+X          fflush(stdout);
+X#endif
+X        }
+X    }
+X#ifdef STATS
+X  printf("Average Depth = %g\n",(1.*avedep)/base);
+X#endif
+X}
+X
+X#include "main.i"
+END_OF_FILE
+if test 2760 -ne `wc -c <'chang.c'`; then
+    echo shar: \"'chang.c'\" unpacked with wrong size!
+fi
+# end of 'chang.c'
+fi
+if test -f 'gen4.c' -a "${1}" != "-c" ; then 
+  echo shar: Will not clobber existing file \"'gen4.c'\"
+else
+echo shar: Extracting \"'gen4.c'\" \(3629 characters\)
+sed "s/^X//" >'gen4.c' <<'END_OF_FILE'
+X/* Generate Four-Russians tables */
+X
+X#include <stdio.h>
+X#include <stdlib.h>
+X
+Xstatic int K;
+X
+Xstatic int  *STAB, *DTAB;
+Xstatic char *CTAB;
+X
+Xstatic int pow3[50], pow2[50];
+X
+Xstatic void STATE(k,idx,ost,car) register int k, idx, ost, car;
+X{ register int rdx, p3;
+X
+X  if (k < K)
+X    { rdx = idx + pow2[k];
+X      k  += 1;
+X      p3  = pow3[k];
+X      if (car < 0)
+X        { ost += 2*p3;
+X          STATE(k,idx      ,ost, 1);
+X          STATE(k,rdx      ,ost, 1);
+X          STATE(k,idx += p3,ost, 0);
+X          STATE(k,rdx += p3,ost, 0);
+X          STATE(k,idx +  p3,ost,-1);
+X          STATE(k,rdx +  p3,ost,-1);
+X        }
+X      else if (car > 0)
+X        { STATE(k,idx      ,ost   , 1);
+X          STATE(k,rdx      ,ost   , 1);
+X          STATE(k,idx += p3,ost   , 0);
+X          STATE(k,rdx += p3,ost+p3, 1);
+X          STATE(k,idx +  p3,ost   ,-1);
+X          STATE(k,rdx +  p3,ost+p3, 0);
+X        }
+X      else
+X        { ost += p3;
+X          STATE(k,idx      ,ost   , 1);
+X          STATE(k,rdx      ,ost   , 1);
+X          STATE(k,idx += p3,ost   , 0);
+X          STATE(k,rdx += p3,ost+p3, 1);
+X          STATE(k,idx +  p3,ost   ,-1);
+X          STATE(k,rdx +  p3,ost+p3, 0);
+X        }
+X    }
+X  else
+X    { STAB[idx] = ost;
+X      CTAB[idx] = car;
+X    }
+X}
+X
+Xvoid DELTA(k,idx,sum) register int k, idx, sum;
+X{ register int p3;
+X  if (k < K)
+X    { k += 1;
+X      p3 = pow3[k];
+X      DELTA(k,idx      ,sum-1);
+X      DELTA(k,idx += p3,sum  );
+X      DELTA(k,idx +  p3,sum+1);
+X    }
+X  else
+X    DTAB[idx] = DTAB[idx+1] = DTAB[idx+2] = sum;
+X}
+X
+Xmain(argc,argv) int argc; char *argv[];
+X{ register int p, c, ix;
+X
+X  if (argc < 2)
+X    { fprintf(stderr,"%s: usage is '%s <tuple size> [ -y -n -t ]'\n",
+X                     argv[0],argv[0]);
+X      exit (1);
+X    }
+X
+X  K = atoi(argv[1]);
+X
+X  if (K <= 0)
+X    { fprintf(stderr,"%s: tuple size, %d, must be positive\n",argv[0]);
+X      exit (1);
+X    }
+X  if (K > 11)
+X    { fprintf(stderr,"%s: tuple size, %d, is too large\n",argv[0]);
+X      exit (1);
+X    }
+X
+X  pow3[0] = 1;
+X  for (c = 1; c <= K+1; c++)
+X    pow3[c] = 3*pow3[c-1];
+X  pow2[0] = pow3[K+1];
+X  for (c = 1; c <= K; c++)
+X    pow2[c] = 2*pow2[c-1];
+X
+X  if (argc < 3 || strcmp(argv[2],"-y") != 0)
+X    { fprintf(stderr,"Tables will occupy %d bytes.\n",5*pow2[K]+4*pow3[K+1]);
+X      if (argc >= 3 && strcmp(argv[2],"-n") == 0) exit (0);
+X      fprintf(stderr,"Do you wish to proceed (y/n): ");
+X      c = getchar();
+X      if (c != '\n' && c != 'y') exit (0);
+X    }
+X
+X  STAB = (int *)  malloc(sizeof(int)*pow2[K]);
+X  CTAB = (char *) malloc(sizeof(char)*pow2[K]);
+X  DTAB = (int *)  malloc(sizeof(int)*pow3[K+1]);
+X
+X  for (c = 0; c <= 2; c++)
+X    STATE(0,c,1,c-1);
+X  DELTA(0,0,0);
+X
+X  if (argc >= 3 && strcmp(argv[2],"-t") == 0) exit (0);
+X
+X  printf("int K = %d;\n\n",K);
+X
+X  ix = pow2[K];
+X  printf("int STAB[] = {\n");
+X#ifdef DEBUG
+X  for (p = 0; p < ix; p += 3)
+X    { printf("\t\t");
+X      for (c = 0; c <= 2; c++)
+X        printf("%5d, ",STAB[p+c]/3);
+X      printf("\n");
+X    }
+X#else
+X  for (p = 0; p < ix; p++)
+X    printf("%d,",STAB[p]);
+X#endif
+X  printf("             };\n\n");
+X
+X  printf("char CTAB[] = {\n");
+X#ifdef DEBUG
+X  for (p = 0; p < ix; p += 3)
+X    { printf("\t\t");
+X      for (c = 0; c <= 2; c++)
+X        printf("%2d, ",CTAB[p+c]);
+X      printf("\n");
+X    }
+X#else
+X  for (p = 0; p < ix; p++)
+X    printf("%d,",CTAB[p]);
+X#endif
+X  printf("             };\n\n");
+X
+X  printf("int DTAB[] = {\n");
+X  ix = pow3[K+1];
+X#ifdef DEBUG
+X  for (p = 0; p < ix; p += 3)
+X    { printf("\t\t");
+X      for (c = 0; c <= 2; c++)
+X        printf("%2d, ",DTAB[p+c]);
+X      printf("\n");
+X    }
+X#else
+X  for (p = 0; p < ix; p++)
+X    printf("%d,",DTAB[p]);
+X#endif
+X  printf("             };\n");
+X
+X  exit (0);
+X}
+END_OF_FILE
+if test 3629 -ne `wc -c <'gen4.c'`; then
+    echo shar: \"'gen4.c'\" unpacked with wrong size!
+fi
+# end of 'gen4.c'
+fi
+if test -f 'genseq.c' -a "${1}" != "-c" ; then 
+  echo shar: Will not clobber existing file \"'genseq.c'\"
+else
+echo shar: Extracting \"'genseq.c'\" \(856 characters\)
+sed "s/^X//" >'genseq.c' <<'END_OF_FILE'
+X/* genseq "#l,#a":
+X     Places a random string of length #l over alphabet #a on stdout.
+X*/
+X
+X#include <stdio.h>
+X#include <math.h>
+X
+X#define SIG 70
+X
+Xchar *cset =
+X   "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*(";
+X
+Xint len, alpha;
+Xdouble drand48();
+Xvoid   srand48();
+X
+Xmain(argc,argv) int argc; char *argv[];
+X{ register int i;
+X
+X  if (argc <= 1)
+X    error(1,"usage: #l,#a");
+X  if (sscanf(argv[1],"%d,%d",&len,&alpha) != 2)
+X    error(1,"usage: #l,#a");
+X  if (len < 0 || alpha < 0)
+X    error(0,"positive arguments only");
+X  if (alpha > SIG)
+X    error(0,"alphabet too large");
+X
+X  for (i = 1; i <= len; i++)
+X    fputc(cset[(int) (drand48()*alpha)],stdout);
+X  exit (0);
+X}
+X
+Xerror(usage,txt) int usage; char *txt;
+X{ if (usage)
+X    fprintf(stderr,"%s\n",txt);
+X  else
+X    fprintf(stderr,"#l = %d\n#a = %d\n\n%s\n",len,alpha,txt);
+X  exit (1);
+X}
+END_OF_FILE
+if test 856 -ne `wc -c <'genseq.c'`; then
+    echo shar: \"'genseq.c'\" unpacked with wrong size!
+fi
+# end of 'genseq.c'
+fi
+if test -f 'main.i' -a "${1}" != "-c" ; then 
+  echo shar: Will not clobber existing file \"'main.i'\"
+else
+echo shar: Extracting \"'main.i'\" \(1745 characters\)
+sed "s/^X//" >'main.i' <<'END_OF_FILE'
+Xstatic char *progname;
+X
+Xvoid error(msg,arg) char *msg, *arg;
+X{ fprintf(stderr,"%s: ",progname);
+X  fprintf(stderr,msg,arg);
+X  fprintf(stderr,"\n");
+X  exit(1);
+X}
+X
+X#define SIG  70
+X
+Xvoid   srand48();
+Xdouble drand48();
+X
+Xvoid main(argc,argv) int argc; char *argv[];
+X{ int   ifile;
+X  int   dif;
+X  char *pat;
+X  int   i;
+X  int   len, alpha;
+X  static char *cset = 
+X    "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()";
+X
+X  progname = argv[0];
+X
+X  if (argc < 2) error("Usage is '%s <pat> [ dif ] [ file ]'",progname);
+X
+X  if (isdigit(argv[1][0]))
+X    { if (sscanf(argv[1],"%d,%d",&len,&alpha) != 2)
+X        error("pattern spec should be of the form #l,#a",0);
+X      if (len < 0 || alpha < 0)
+X        error("only positive arguments in pattern spec.",0);
+X      if (alpha > SIG)
+X        error("alphabet has more than %d symbols",SIG);
+X      pat = (char *) malloc(len+1);
+X      srand48(SIG*len + alpha);
+X      pat[len] = '\0';
+X      while (len-- > 0)
+X        pat[len] = cset[(int) (drand48()*alpha)];
+X    }
+X  else
+X    pat = argv[1];
+X
+X  if (argc >= 3)
+X    { dif = atoi(argv[2]);
+X      if (dif < 0) error("Threshold, %d, is negative\n",dif);
+X    }
+X  else
+X    dif = 0;
+X
+X  if (argc >= 4)
+X    { ifile = open(argv[3],O_RDONLY);
+X      if (ifile == -1) error("Can't open file %s",argv[3]);
+X    }
+X  else
+X    ifile = 1;
+X
+X  encode_pattern(pat);
+X  if (dif > patlen)
+X    error("Threshold greater than pattern length",0);
+X
+X#ifdef SHOW
+X  printf("Pat = '%s'(%d) dif=%d\n",pat,patlen,dif);
+X  show_pat();
+X#endif
+X
+X#ifdef STATS
+X  setup_search();
+X  search(ifile,dif);
+X
+X#else
+X  setup_search();
+X  if (argc >= 4)
+X    for (i = 0; i < 10; i++)
+X      { search(ifile,dif);
+X        close(ifile);
+X        ifile = open(argv[3],O_RDONLY);
+X      }
+X#endif
+X
+X  exit (0);
+X}
+END_OF_FILE
+if test 1745 -ne `wc -c <'main.i'`; then
+    echo shar: \"'main.i'\" unpacked with wrong size!
+fi
+# end of 'main.i'
+fi
+if test -f 'myers.c' -a "${1}" != "-c" ; then 
+  echo shar: Will not clobber existing file \"'myers.c'\"
+else
+echo shar: Extracting \"'myers.c'\" \(7859 characters\)
+sed "s/^X//" >'myers.c' <<'END_OF_FILE'
+X#include <stdio.h>
+X#include <sys/file.h>
+X#include <string.h>
+X#include <ctype.h>
+X#include <math.h>
+X
+X#define WORD long
+X
+X#define SIGMA    128
+X#define BUF_MAX 2048
+X
+X#include "parse.i"
+X
+Xstatic int W;
+X
+Xstatic unsigned WORD All   = -1;
+Xstatic unsigned WORD Ebit;
+X
+Xstatic unsigned WORD *TRAN[SIGMA];
+Xstatic unsigned WORD Pc[SIGMA];
+Xstatic int seg, rem;
+X
+Xvoid setup_search()
+X{ register unsigned WORD *b, bvc, one;
+X  register int a, p, i, k;
+X
+X  W = sizeof(unsigned WORD)*8;
+X
+X  seg = (patlen-1)/W + 1;
+X  rem = seg*W - patlen;
+X
+X#ifdef SHOW
+X  printf("\t(seg,rem) = (%d,%d)\n",seg,rem);
+X#endif
+X
+X  b = (unsigned WORD *) malloc(sizeof(unsigned WORD)*(SIGMA*seg+1));
+X  for (a = 0; a < SIGMA; a++)
+X    { TRAN[a] = b;
+X      for (p = 0; p < patlen; p += W)
+X        { bvc = 0;
+X          one = 1;
+X          k = p+W;
+X          if (patlen < k) k = patlen;
+X          for (i = p; i < k; i++)
+X            { if (patvec[i].type == CHAR)
+X                { if (a == *(patvec[i].value))
+X                    bvc |= one;
+X                }
+X              else
+X                { if (patvec[i].value[a>>3] & 1<<a%8)
+X                    bvc |= one;
+X                }
+X              one <<= 1;
+X            }
+X          k = p+W;
+X          while (i++ < k)
+X            { bvc |= one;
+X              one <<= 1;
+X            }
+X          *b++ = bvc;
+X        }
+X    }
+X
+X  for (a = 0; a < SIGMA; a++)
+X    Pc[a] = TRAN[a][0];
+X
+X  Ebit = (((long) 1) << (W-1));
+X
+X
+X#ifdef SHOW
+X  for (a = 0; a < SIGMA; a++)
+X    { if (isprint(a))
+X        printf("  %c: ",a);
+X      else
+X        printf("%3d: ",a);
+X      b = TRAN[a];
+X      for (p = 0; p < patlen; p += W)
+X        { for (i = 0; i < W; i++)
+X            if (*b & (((long) 1)<<i))
+X              printf("1");
+X            else
+X              printf("0");
+X          printf(" ");
+X          b += 1;
+X        }
+X      printf("\n");
+X    }
+X#endif
+X
+X}
+X
+X#ifdef STATS
+Xstatic long avedep, aveinc, avedec, averes, avezero;
+X#endif
+X
+Xtypedef struct { unsigned WORD P;
+X                 unsigned WORD M;
+X                 int           V;
+X               } Scell;
+X
+Xvoid search(ifile,dif) int ifile, dif;
+X{ int num, i, base, diw, a, Cscore;
+X  Scell *s, *sd;
+X  unsigned WORD pc, mc;
+X  register unsigned WORD *e;
+X  register unsigned WORD P, M, U, X, Y;
+X  Scell *S, *SE;
+X  static char buf[BUF_MAX];
+X
+X  S  = (Scell *) malloc(sizeof(Scell)*seg);
+X  SE = S + (seg-1);
+X
+X  diw = dif + W;
+X
+X  sd = S + (dif-1)/W;
+X  for (s = S; s <= sd; s++)
+X    { s->P = All;
+X      s->M =  0;
+X      s->V = ((s-S)+1)*W;
+X    }
+X
+X#ifdef STATS
+X  avedep = aveinc = avedec = averes = avezero = 0;
+X#endif
+X  for (base = 1-rem; (num = read(ifile,buf,BUF_MAX)) > 0; base += num)
+X    { i = 0;
+X      if (sd == S)
+X        { P = S->P;
+X          M = S->M;
+X          Cscore = S->V;
+X          for (; i < num; i++)
+X            { a = buf[i];
+X
+X              U  = Pc[a];
+X              X  = (((U & P) + P) ^ P) | U;
+X              U |= M;
+X    
+X              Y = P;
+X              P = M | ~ (X | Y);
+X              M = Y & X;
+X
+X              if (P & Ebit)
+X                Cscore += 1;
+X              else if (M & Ebit)
+X                Cscore -= 1;
+X
+X              Y = P << 1;
+X              P = (M << 1) | ~ (U | Y);
+X              M = Y & U;
+X
+X#ifdef STATS
+X              avezero += 1;
+X#endif
+X
+X#ifdef SHOW
+X            { register int k;
+Xprintf("%4d ",i+base);
+X              if (isprint(buf[i]))
+X                printf("  %c: ",buf[i]);
+X              else
+X                printf("%3d: ",buf[i]);
+X              printf("Col =");
+X              for (k = 0; k < W; k++)
+X                if (P & (((long) 1) << k))
+X                  printf(" +1");
+X                else if (M & (((long) 1) << k))
+X                  printf(" -1");
+X                else
+X                  printf("  0");
+X              printf(" [%d]\n",Cscore);
+X            }
+X#endif
+X
+X              if (Cscore <= dif)
+X                break;
+X            }
+X
+X          S->P = P;
+X          S->M = M;
+X          S->V = Cscore;
+X
+X          if (i >= num) continue;
+X
+X          if (sd == SE)
+X            printf("  Match at %d\n",base+i);
+X#ifdef SHOW
+X          else
+X            printf("\n");
+X#endif
+X
+X          i += 1;
+X        }
+X
+X      for (; i < num; i++)
+X        { e  = TRAN[buf[i]];
+X
+X#ifdef SHOW
+Xprintf("%4d ",i+base);
+X          if (isprint(buf[i]))
+X            printf("  %c: ",buf[i]);
+X          else
+X            printf("%3d: ",buf[i]);
+X          printf("Col =");
+X#endif
+X
+X          pc = mc = 0;
+X          s  = S;
+X          while (s <= sd)
+X            { U  = *e++;
+X              P  = s->P;
+X              M  = s->M;
+X
+X              Y  = U | mc;
+X              X  = (((Y & P) + P) ^ P) | Y;
+X              U |= M;
+X
+X              Y = P;
+X              P = M | ~ (X | Y);
+X              M = Y & X;
+X    
+X              Y = (P << 1) | pc;
+X              s->P = (M << 1) | mc | ~ (U | Y);
+X              s->M = Y & U;
+X    
+X              U = s->V;
+X              pc = mc = 0;
+X              if (P & Ebit)
+X                { pc = 1; s->V = U+1; }
+X              else if (M & Ebit)
+X                { mc = 1; s->V = U-1; }
+X
+X#ifdef SHOW
+X            { register int k;
+X              for (k = 0; k < W; k++)
+X                if (s->P & (((long) 1) << k))
+X                  printf(" +1");
+X                else if (s->M & (((long) 1) << k))
+X                  printf(" -1");
+X                else
+X                  printf("  0");
+X              printf(" [%d]",s->V);
+X            }
+X#endif
+X
+X              s += 1;
+X            }
+X#ifdef STATS
+X          avedep += (sd-S);
+X#endif
+X
+X          if (U == dif && (*e & 0x1 | mc) && s <= SE)
+X            { s->P = All;
+X              s->M = 0;
+X              if (pc == 1)
+X                s->M = 0x1;
+X              if (mc != 1)
+X                s->P <<= 1;
+X              s->V = U = diw-1;
+X              sd   = s;
+X
+X#ifdef SHOW
+X            { register int k;
+X              for (k = 0; k < W; k++)
+X                if (s->P & (1 << k))
+X                  printf(" +1");
+X                else if (s->M & (1 << k))
+X                  printf(" -1");
+X                else
+X                  printf("  0");
+X              printf(" [%d]",s->V);
+X            }
+X#endif
+X#ifdef STATS
+X              aveinc += 1;
+X#endif
+X            }
+X          else
+X            { U = sd->V;
+X              while (U > diw)
+X                { U = (--sd)->V;
+X#ifdef STATS
+X                  avedec += 1;
+X#endif
+X                }
+X            }
+X          if (sd == SE && U <= dif)
+X            printf("  Match at %d\n",base+i);
+X#ifdef SHOW
+X          else
+X            printf("\n");
+X#endif
+X        }
+X
+X      while (sd > S)
+X        { i = sd->V; 
+X          P = sd->P;
+X          M = sd->M;
+X
+X#ifdef TAIL
+X        { register int k;
+X          printf(" %6d:",base+rem);
+X          for (k = 0; k < W; k++)
+X            if (sd->P & (1 << k))
+X              printf("P");
+X            else if (sd->M & (1 << k))
+X              printf("M");
+X            else
+X              printf("0");
+X          printf(" [%d]\n",sd->V);
+X        }
+X#endif
+X          Y = Ebit;
+X          for (X = 0; X < W; X++)
+X            { if (P & Y)
+X                { i -= 1;
+X                  if (i <= dif) break;
+X                }
+X              else if (M & Y)
+X                i += 1;
+X              Y >>= 1;
+X            }
+X          if (i <= dif) break;
+X#ifdef TAIL
+X          printf("  Dec'd\n");
+X#endif
+X#ifdef STATS
+X          averes += 1;
+X#endif
+X          sd -= 1;
+X        }
+X    }
+X
+X#ifdef STATS
+X{ double len;
+X  len = (base + rem) - 1.;
+X  printf("Ave. Depth = %g, Ave. Inc = %g, Ave. Dec = %g Ave. Res = %g",
+X         avedep/len + 1., aveinc/len, avedec/len, averes/len);
+X  printf(" Ave. Filter = %g\n", avezero/len);
+X}
+X#endif
+X
+X  if (sd == SE)
+X    { P = sd->P;
+X      M = sd->M;
+X      U = sd->V;
+X      for (i = 0; i < rem; i++)
+X        { if (P & Ebit)
+X            U -= 1;
+X          else if (M & Ebit)
+X            U += 1;
+X          P <<= 1;
+X          M <<= 1;
+X          if (U <= dif)
+X            printf("  Match at %d\n",base+i);
+X#ifdef SHOW
+X          printf("#: %5d(%2d)\n",U,sd-S);
+X#endif
+X        }
+X    }
+X}
+X
+X#include "main.i"
+END_OF_FILE
+if test 7859 -ne `wc -c <'myers.c'`; then
+    echo shar: \"'myers.c'\" unpacked with wrong size!
+fi
+# end of 'myers.c'
+fi
+if test -f 'mygrep.c' -a "${1}" != "-c" ; then 
+  echo shar: Will not clobber existing file \"'mygrep.c'\"
+else
+echo shar: Extracting \"'mygrep.c'\" \(2664 characters\)
+sed "s/^X//" >'mygrep.c' <<'END_OF_FILE'
+X#include <stdio.h>
+X#include <sys/file.h>
+X#include <string.h>
+X#include <ctype.h>
+X#include <math.h>
+X
+X#define WORD long
+X
+X#define SIGMA    128
+X#define BUF_MAX 2048
+X
+X#include "parse.i"
+X
+Xunsigned WORD Pc[SIGMA];
+X
+Xvoid setup_search()
+X{ unsigned WORD One;
+X  register int a, p;
+X  void error();
+X
+X  if (patlen > 8*sizeof(unsigned WORD))
+X    error("Pattern is longer than %d\n elements",8*sizeof(unsigned WORD));
+X  for (a = 0; a < SIGMA; a++)
+X    Pc[a] = 0;
+X  One = 1;
+X  for (p = 0; p < patlen; p++)
+X    { if (patvec[p].type == CHAR)
+X        Pc[*(patvec[p].value)] |= One;
+X      else
+X        for (a = 0; a < SIGMA; a++)
+X          if (patvec[p].value[a>>3] & 1<<a%8)
+X            Pc[a] |= One;
+X      One <<= 1;
+X    }
+X
+X#ifdef SHOW
+X  One = 1;
+X  for (a = 0; a < SIGMA; a++)
+X    { if (isprint(a))
+X        printf("  %c: ",a);
+X      else
+X        printf("%3d: ",a);
+X      for (p = 0; p < patlen; p++)
+X        if (Pc[a] & (One<<p))
+X          printf("1");
+X        else
+X          printf("0");
+X      printf("\n");
+X    }
+X#endif
+X}
+X
+Xstatic int cnt = 0;
+X
+Xvoid report(int pos)
+X{ cnt += 1; }
+X
+Xvoid search(ifile,dif) int ifile, dif;
+X{ register unsigned WORD P, M, X, U, Y;
+X  unsigned WORD Ebit, One;
+X  int a, i, p, num, base, Cscore; 
+X  static char buf[BUF_MAX];
+X
+X  One  = 1;
+X  Ebit = (One << (patlen-1));
+X  P    = -1;
+X  M    = 0;
+X
+X  Cscore = patlen;
+X  for (base = 1; (num = read(ifile,buf,BUF_MAX)) > 0; base += num)
+X    { for (i = 0; i < num; i++)
+X        { a  = buf[i];
+X
+X          U  = Pc[a];
+X          X  = (((U & P) + P) ^ P) | U;
+X          U |= M;
+X
+X          Y = P;
+X          P = M | ~ (X | Y);
+X          M = Y & X;
+X
+X          if (P & Ebit)
+X            Cscore += 1;
+X          else if (M & Ebit)
+X            Cscore -= 1;
+X
+X          Y = P << 1;
+X          P = (M << 1) | ~ (U | Y);
+X          M = Y & U;
+X
+X          if (Cscore <= dif)
+X            report(base+i);
+X
+X#ifdef SHOW
+X          if (isprint(a))
+X            printf("  %c: ",a);
+X          else
+X            printf("%3d: ",a);
+X
+X          printf("U   =");
+X          for (p = 0; p < patlen; p++)
+X            if (U & (One << p))
+X              printf("  1");
+X            else
+X              printf("  0");
+X          printf("\n     ");
+X
+X          printf("X   =");
+X          for (p = 0; p < patlen; p++)
+X            if (X & (One << p))
+X              printf("  1");
+X            else
+X              printf("  0");
+X          printf("\n     ");
+X
+X          printf("Col =");
+X          for (p = 0; p < patlen; p++)
+X            if (P & (One << p))
+X              printf(" +1");
+X            else if (M & (1 << p))
+X              printf(" -1");
+X            else
+X              printf("  0");
+X          printf("\n\n");
+X#endif
+X        }
+X    }
+X
+X}
+X
+X#include "main.i"
+END_OF_FILE
+if test 2664 -ne `wc -c <'mygrep.c'`; then
+    echo shar: \"'mygrep.c'\" unpacked with wrong size!
+fi
+# end of 'mygrep.c'
+fi
+if test -f 'parse.i' -a "${1}" != "-c" ; then 
+  echo shar: Will not clobber existing file \"'parse.i'\"
+else
+echo shar: Extracting \"'parse.i'\" \(3527 characters\)
+sed "s/^X//" >'parse.i' <<'END_OF_FILE'
+X#define CHAR  0
+X#define CLASS 1
+X
+Xtypedef struct { char type, *value; } element;
+X
+Xstatic int      patlen;
+Xstatic element *patvec;
+X
+Xint scan1(pat) register char *pat;
+X{ register int vlen;
+X  void error();
+X
+X  patlen = vlen = 0;
+X  while (*pat != '\0')
+X    switch (*pat)
+X    { case '.':
+X        pat += 1;
+X        patlen += 1;
+X        break;
+X      case '[':
+X        if (*++pat == '^')
+X          pat += 1;
+X        while (*pat != ']')
+X          { if (*pat == '\\') pat += 1;
+X            if (*pat++ == '\0') error("prematurely terminated class");
+X            if (*pat == '-')
+X              { if (*++pat == '\\') pat += 1;
+X                if (*pat++ == '\0') error("prematurely terminated class");
+X              }
+X          }
+X        pat += 1;
+X        patlen += 1;
+X        vlen += 16;
+X        break;
+X      case '\\':
+X        if (*++pat == '\0') error("\\ at end of pattern");
+X      default:
+X        pat += 1;
+X        patlen += 1;
+X        vlen += 1;
+X        break;
+X    }
+X  return (vlen);
+X}
+X
+Xvoid scan2(pat,vlen) register char *pat; int vlen;
+X{ register int c, comp;
+X  register char *vpt;
+X  void error();
+X
+X  static char dot[16] = { '\377', '\377', '\377', '\377',
+X                          '\377', '\377', '\377', '\377',
+X                          '\377', '\377', '\377', '\377',
+X                          '\377', '\377', '\377', '\377' };
+X
+X  vpt = (char *) malloc(vlen);
+X  patvec = (element *) malloc(sizeof(element)*patlen);
+X
+X  patlen = 0;
+X  while (*pat != '\0')
+X    switch (*pat)
+X    { case '.':
+X        pat += 1;
+X        patvec[patlen].type = CLASS;
+X        patvec[patlen].value = dot;
+X        patlen += 1;
+X        break;
+X      case '[':
+X        for (c = 0; c <= 15; c++)
+X          vpt[c] = 0;
+X        comp = 0;
+X        if (*++pat == '^')
+X          { pat += 1;
+X            comp = 1;
+X          }
+X        while (*pat != ']')
+X          { c = *pat++;
+X            if (c == '\\') c = *pat++;
+X            if (*pat == '-')
+X              { if (*++pat == '\\') pat += 1;
+X                vpt[c>>3] |= 1 << c%8;
+X                while (c != *pat)
+X                  { if (c > *pat)
+X                      c -= 1;
+X                    else
+X                      c += 1;
+X                    vpt[c>>3] |= 1 << c%8;
+X                  }
+X                pat += 1;
+X              }
+X            else
+X              vpt[c>>3] |= 1 << c%8;
+X          }
+X        if (comp)
+X          for (c = 0; c <= 15; c++)
+X            vpt[c] ^= 0377;
+X        pat += 1;
+X        patvec[patlen].type = CLASS;
+X        patvec[patlen].value = vpt;
+X        patlen += 1;
+X        vpt += 16;
+X        break;
+X      case '\\':
+X        if (*++pat == '\0') error("\\ at end of pattern",0);
+X      default:
+X        patvec[patlen].type = CHAR;
+X        patvec[patlen].value = vpt;
+X        *vpt++ = *pat++;
+X        patlen += 1;
+X        break;
+X    }
+X}
+X
+X#ifdef SHOW
+Xstatic char *slab[] = { "CHAR ", "CLASS " };
+X
+Xvoid show_pat()
+X{ int i, j, k;
+X  char c;
+X
+X  for (k = 0; k < patlen; k++)
+X    { printf("  %3d: %s",k,slab[patvec[k].type]);
+X      if (patvec[k].type == CHAR)
+X        printf(" %c\n",*(patvec[k].value));
+X      else
+X        { for (i = 0; i <= 15; i++)
+X            { c = patvec[k].value[i];
+X              if (i%4 == 0 && i != 0)
+X                printf("              ");
+X              else
+X                putchar(' ');
+X              for (j = 0; j <= 7; j++)
+X                if (c & 1<<j) putchar('1'); else putchar('0');
+X              if (i%4 == 3) putchar('\n');
+X            }
+X        }
+X    }
+X}
+X#endif
+X
+Xvoid encode_pattern(pat) char *pat;
+X{ int vlen;
+X  vlen = scan1(pat);
+X  scan2(pat,vlen);
+X} 
+END_OF_FILE
+if test 3527 -ne `wc -c <'parse.i'`; then
+    echo shar: \"'parse.i'\" unpacked with wrong size!
+fi
+# end of 'parse.i'
+fi
+if test -f 'ukk.c' -a "${1}" != "-c" ; then 
+  echo shar: Will not clobber existing file \"'ukk.c'\"
+else
+echo shar: Extracting \"'ukk.c'\" \(1807 characters\)
+sed "s/^X//" >'ukk.c' <<'END_OF_FILE'
+X#include <stdio.h>
+X#include <sys/file.h>
+X#include <string.h>
+X#include <ctype.h>
+X#include <math.h>
+X
+X#define SIGMA    128
+X#define BUF_MAX 2048
+X
+X#include "parse.i"
+X
+Xstatic int *TRAN[128];
+X
+Xvoid setup_search()
+X{ register int a, p, *b;
+X
+X  b = (int *) malloc(sizeof(int)*SIGMA*patlen);
+X  for (a = 0; a < SIGMA; a++)
+X    { TRAN[a] = b;
+X      for (p = 0; p < patlen; p += 1)
+X        if (patvec[p].type == CHAR)
+X          *b++ = (a != *(patvec[p].value));
+X        else if (patvec[p].value[a>>3] & 1<<a%8)
+X          *b++ = 0;
+X        else
+X          *b++ = 1;
+X    }
+X}
+X
+X#ifdef STATS
+Xstatic long avedep;
+X#endif
+X
+Xvoid search(ifile,dif) int ifile, dif;
+X{ int num, i, base;
+X  register int *s, *sd, *a;
+X  register int  c, d, e;
+X  int *S, *SE;
+X  static char buf[BUF_MAX];
+X
+X  S  = (int *) malloc(sizeof(int)*(patlen+1));
+X  SE = S + patlen;
+X
+X  sd = S+dif;
+X  for (s = S; s <= sd; s++)
+X    *s = s-S;
+X
+X#ifdef STATS
+X  avedep = 0;
+X#endif
+X
+X  for (base = 1; (num = read(ifile,buf,BUF_MAX)) > 0; base += num)
+X    { for (i = 0; i < num; i++)
+X        { a = TRAN[buf[i]];
+X          s = S;
+X          *s++ = e = c = 0;
+X          while (s <= sd)
+X            { c += *a++;
+X              e += 1;
+X              if (c < e) e = c;
+X              d = (c = *s) + 1;
+X              if (d < e) e = d;
+X              *s++ = e;
+X            }
+X#ifdef STATS
+X          avedep += (sd-S);
+X#endif
+X          if (s <= SE)
+X            { c += *a++;
+X              e += 1;
+X              if (c < e) e = c;
+X              *(sd = s) = e;
+X            }
+X          while (*sd > dif)
+X            sd -= 1;
+X          if (sd == SE)
+X            printf("  Match at %d\n",base+i);
+X#ifdef SHOW
+X          printf("%c: %2d\n",buf[i],sd-S);
+X#endif
+X        }
+X    }
+X
+X#ifdef STATS
+X{ double len;
+X  len = base - 1.;
+X  printf("Ave. Depth = %g\n",avedep/len + 1.);
+X}
+X#endif
+X}
+X
+X#include "main.i"
+END_OF_FILE
+if test 1807 -ne `wc -c <'ukk.c'`; then
+    echo shar: \"'ukk.c'\" unpacked with wrong size!
+fi
+# end of 'ukk.c'
+fi
+if test -f 'wmm.c' -a "${1}" != "-c" ; then 
+  echo shar: Will not clobber existing file \"'wmm.c'\"
+else
+echo shar: Extracting \"'wmm.c'\" \(2940 characters\)
+sed "s/^X//" >'wmm.c' <<'END_OF_FILE'
+X#include <stdio.h>
+X#include <sys/file.h>
+X#include <string.h>
+X#include <ctype.h>
+X#include <math.h>
+X
+X#define SIGMA    128
+X#define BUF_MAX 2048
+X
+X#include "parse.i"
+X
+Xextern int K;
+Xextern int STAB[], DTAB[];
+Xextern char CTAB[];
+X
+Xstatic int *TRAN[128];
+Xstatic int seg, rem, smax;
+X
+Xvoid setup_search()
+X{ register int answr;
+X  register int a, p, i, *b;
+X
+X  seg = (patlen-1)/K + 1;
+X  rem = seg*K - patlen;
+X
+X#ifdef SHOW
+X  printf("\t(seg,rem) = (%d,%d)\n",seg,rem);
+X#endif
+X
+X
+X  smax = 1;
+X  for (a = 0; a <= K; a++)
+X    smax *= 3;
+X
+X  b = (int *) malloc(sizeof(int)*SIGMA*seg);
+X  for (a = 0; a < SIGMA; a++)
+X    { TRAN[a] = b;
+X      for (p = 0; p < patlen; p += K)
+X        { answr = 0;
+X          i = p+K;
+X          if (patlen < i) i = patlen;
+X          for (i--; i >= p; i--)
+X            if (patvec[i].type == CHAR)
+X              answr = 2*answr + (a != *(patvec[i].value));
+X            else if (patvec[i].value[a>>3] & 1<<a%8)
+X              answr = 2*answr;
+X            else
+X              answr = 2*answr + 1;
+X          *b++ = answr*smax;
+X        }
+X    }
+X  smax -= 2;
+X}
+X
+X#ifdef STATS
+Xstatic long avedep, avedel;
+X#endif
+X
+Xvoid search(ifile,dif) int ifile, dif;
+X{ int num, i, base, dik;
+X  register int *s, *a, ix, cr, *stab;
+X  register char *ctab;
+X  register int *sd, vi;
+X  int *S, *SE;
+X  static char buf[BUF_MAX];
+X
+X
+X  S  = (int *) malloc(sizeof(int)*(seg+1)) + 1;
+X  SE = S + (seg-1);
+X  dik = dif + K;
+X
+X  sd = S + (dif-1)/K;
+X  for (s = S-1; s <= sd; s++)
+X    *s = smax;
+X  vi = (sd-S+1)*K;
+X
+X#ifdef STATS
+X  avedep = avedel = 0;
+X#endif
+X  stab = STAB;
+X  ctab = CTAB;
+X  for (base = 1-rem; (num = read(ifile,buf,BUF_MAX)) > 0; base += num)
+X    { for (i = 0; i < num; i++)
+X        { a  = TRAN[buf[i]];
+X          cr = 0;
+X          s  = S;
+X          while (s <= sd)
+X            { ix = *a++ + *s + cr;
+X              cr = ctab[ix];
+X              *s++  = stab[ix];
+X            }
+X#ifdef STATS
+X          avedep += (sd-S);
+X#endif
+X          if (vi == dif && s <= SE)
+X            { ix = *a + smax + cr;
+X              *++sd = stab[ix];
+X              vi += K + ctab[ix];
+X#ifdef STATS
+X              avedel += 1;
+X#endif
+X            }
+X          else
+X            { vi += cr;
+X              while (vi > dik)
+X                { vi -= DTAB[*sd--];
+X#ifdef STATS
+X                  avedel += 1;
+X#endif
+X                }
+X            }
+X          if (sd == SE && vi <= dif)
+X            printf("  Match at %d\n",base+i);
+X#ifdef SHOW
+X          printf("%c: %5d(%2d)\n",buf[i],vi,sd-S);
+X#endif
+X        }
+X    }
+X
+X#ifdef STATS
+X{ double len;
+X  len = (base + rem) - 1;
+X  printf("Ave. Depth = %g, Ave. Change = %g\n",
+X         avedep/len + 1., avedel/len);
+X}
+X#endif
+X  if (sd == SE)
+X    { s = sd;
+X      a = TRAN[0] + (SE-S);
+X      for (i = 0; i < rem; i++)
+X        { ix = *a + *s;
+X          *s = stab[ix];
+X          vi += ctab[ix];
+X          if (vi <= dif)
+X            printf("  Match at %d\n",base+i);
+X#ifdef SHOW
+X          printf("#: %5d(%2d)\n",vi,sd-S);
+X#endif
+X        }
+X    }
+X}
+X
+X#include "main.i"
+END_OF_FILE
+if test 2940 -ne `wc -c <'wmm.c'`; then
+    echo shar: \"'wmm.c'\" unpacked with wrong size!
+fi
+# end of 'wmm.c'
+fi
+echo shar: End of shell archive.
+exit 0

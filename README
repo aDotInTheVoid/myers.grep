@@ -1,0 +1,99 @@
+                                             July 13, 1998
+
+This is the code archive for the experiments performed in the paper
+
+"A Fast Bit-Vector Algorithm for Approximate String Matching
+ Based on Dynamic Programming",  by Gene Myers
+
+UNBUNDLING:
+
+To unbundle the code archive, get the file "package" and then say
+"sh package" on any UNIX box and the contents will unpack in the
+current directory.  The package is not gzipped or otherwise compressed
+as it is very modest in size to begin with.
+
+PROGRAM DESCRIPTIONS:
+
+We developed codes for the approximate string matching algorithms listed
+below.  The parameters used to describe the algorithms' performances are
+N = text length, M = pattern length, K = number of errors, S = size of
+alphabet, and W = size of machine word in bits.
+
+ukk:
+  E. Ukkonen, "Finding approximate patterns in strings",
+      J. of Algorithms 6 (1985), 132-137.
+  O(KN) expected time.
+
+wmmX:
+  S. Wu, U. Manber, and G. Myers, "A subquadratic algorithm
+      for approximate limited expression matching",
+      Algorithmica 15 (1996), 50-67.
+  O(KN/X) expected time with O(6^X) space.  We use X=4 or 5.
+
+agrep:
+  S. Wu and U. Manber,"Fast Text Searching Allowing Errors",
+      Communications of the ACM 35 (1992), 83-91.
+  O(NK [M/W] worst-case time.
+
+chang:
+  W.I. Chang and J. Lampe, "Theoretical and empirical comparisons
+      of approximate string matching algorithms", 3rd Combinatorial
+      Pattern Matching Conf., Springer LNCS 644 (1992), 172-181.
+  O(KN/sqrt(S)) expected time.
+
+bngrep and banav:
+  R.A. Baeza-Yates and G. Navarro, "A faster algorithm for approximate
+      string matching", 7th Combinatorial Pattern Matching Conf.,
+      Springer LNCS 1075 (1996), 1-23.
+  bngrep is a version that works in only one-word and so is limited to
+    the case where (M-K)(K+2) <= W.  O(N) worst-case time in this case.
+  banav is the unrestricted version implemented as suggested in an
+    as yet unpublished version so it takes
+     O(N [ K^2 / (W sqrt(S)) ]) expected time.
+
+mygrep and myers:
+  This paper.
+  mygrep is a version that works in only one-word and so is limited to
+    the case where M <= W. O(N) worst-case time in this case.
+  myers is the unrestricted version that runs in O(N [K/W]) expected time.
+
+Each algorithm has a .c file in the package and each includes two .i files,
+main.i and parse.i, common to them all.  main.i is the top level routine
+that determines the command line behavior and parse.i is a routine that
+parses and encodes a limited regular expression.  Each algorithm is
+partitioned into a "setup" subroutine that performs any initialization
+neeeded for a search, and a "search" subroutine that performs the search.
+"SHOW" and "STATS" conditional compilation flags are used throughout to
+selective compile code for debugging and performance statistics respectively.
+
+COMPILATION:
+
+A makefile is included.  Say "make all" and a version of each algorithm
+above gets made plus a "stats" version that separately shows statistics
+for a search.  If the name of the program is foo, then the stats-version
+is names fooS.  This was done so that timing trials and the parameters
+for performance prediction are separated.
+
+Say "make data" and the makefile runs a small routine that makes random
+texts of length one million for alphabet sizes 2, 4, 8, 16, 32, and 64.
+
+USAGE:
+
+The command line call to any routine take one of two forms:
+
+1. <name> <pattern> [K] [file]
+
+or
+
+2. <name> "<M>,<S>" [K] [file]
+
+The parameters M,K,S are as above and all should be given as integers.
+File is a text file over which the search is performed.  If ommitted
+the standard input is read.  If K is ommitted then K=0 is assumed.
+In form 1, give the pattern as a string on the text line, e.g.
+
+  agrep "neverfindit" 2 bigoltext
+
+In form 2, a random pattern of length M over an alphabet of size S
+is generated.  The alphabet in each case is the same one generated
+by "genseq.c" that makes the datasets for "make data".
