@@ -71,6 +71,7 @@ bngrepS : bngrep.c
 	$(CC) $(CFLAGS) -DSTATS -o bngrepS bngrep.c
 
 clear:
-	rm ukk chang wmm4 wmm5 gen4 myers banav mygrep agrep bngrep
-	rm ukkS changS wmm4S wmm5S myersS banavS mygrepS agrepS bngrepS
-	rm DATA.2 DATA.4 DATA.8 DATA.16 DATA.32 DATA.64
+	rm -f ukk chang wmm4 wmm5 gen4 myers banav mygrep agrep bngrep
+	rm -f ukkS changS wmm4S wmm5S myersS banavS mygrepS agrepS bngrepS
+	rm -f DATA.2 DATA.4 DATA.8 DATA.16 DATA.32 DATA.64
+	rm -f xxx.c
