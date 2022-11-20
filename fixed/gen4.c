@@ -76,11 +76,11 @@ int main(argc,argv) int argc; char *argv[];
   K = atoi(argv[1]);
 
   if (K <= 0)
-    { fprintf(stderr,"%s: tuple size, %d, must be positive\n",argv[0]);
+    { fprintf(stderr,"%s: tuple size, %d, must be positive\n",argv[0],K);
       exit (1);
     }
   if (K > 11)
-    { fprintf(stderr,"%s: tuple size, %d, is too large\n",argv[0]);
+    { fprintf(stderr,"%s: tuple size, %d, is too large\n",argv[0],K);
       exit (1);
     }
 
