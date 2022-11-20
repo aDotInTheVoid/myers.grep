@@ -130,7 +130,7 @@ static void dynamic_setup(int dif)
 #endif
 }
 
-static cnt = 0;
+static int cnt = 0;
 
 void report(int pos)
 { cnt += 1; }

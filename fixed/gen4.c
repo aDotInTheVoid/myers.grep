@@ -64,7 +64,7 @@ void DELTA(k,idx,sum) register int k, idx, sum;
     DTAB[idx] = DTAB[idx+1] = DTAB[idx+2] = sum;
 }
 
-main(argc,argv) int argc; char *argv[];
+int main(argc,argv) int argc; char *argv[];
 { register int p, c, ix;
 
   if (argc < 2)
