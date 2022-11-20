@@ -1,3 +1,5 @@
+#include <stdlib.h>
+
 #define CHAR  0
 #define CLASS 1
 

@@ -3,6 +3,8 @@
 #include <string.h>
 #include <ctype.h>
 #include <math.h>
+#include <stdlib.h>
+#include <unistd.h>
 
 #define SIGMA    128
 #define BUF_MAX 2048

@@ -1,3 +1,7 @@
+#include <stdlib.h>
+#include <stdlib.h>
+#include <unistd.h>
+
 static char *progname;
 
 void error(msg,arg) char *msg, *arg;
