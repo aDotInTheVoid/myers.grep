@@ -183,13 +183,15 @@ static int cnt = 0;
 void report(int pos)
 { cnt += 1; }
 
+static void search1(int ifile, int dif);
+
 void search(ifile,dif) int ifile, dif;
 { register unsigned WORD *D, X, C, *e;
   unsigned WORD one;
   int lrp1, lrp2, ld, ldm1;
   int i, j, num, base, active; 
   static char buf[BUF_MAX];
-  static void search1(int,int);
+  
 
   dynamic_setup(dif);
 
@@ -322,7 +324,7 @@ void search(ifile,dif) int ifile, dif;
 #endif
 }
 
-static void search1(ifile,dif) int ifile, dif;
+static void search1(int ifile,int dif)
 { register unsigned WORD *D, X, C, *e;
   unsigned WORD one;
   int i, j, num, base, active; 
